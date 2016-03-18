@@ -95,7 +95,6 @@ $app->get('/api/msg/{id:[0-9]+}', function ($id) use ($app) {
 // Adds a new robot
 $app->post('/api/robots', function () use ($app) {
 	$robot = $app->request->getJsonRawBody();
-	// var_dump($robot);exit;
 	$phql = "INSERT INTO Robots (name, type, year) VALUES (:name:, :type:, :year:)";
 
 	$status = $app->modelsManager->executeQuery($phql, array(
@@ -258,7 +257,6 @@ $app->get('/api/messages/{id:[0-9]+}', function ($id) use ($app) {
 });
 $app->post('/api/messages', function () use ($app) {
 	$messages = $app->request->getJsonRawBody();
-	// var_dump($messages);exit;
 	$phql = "INSERT INTO msg (from_uid, to_uid, contents,time) VALUES (:from_uid:, :to_uid:, :contents:, :time:)";
 
 	$status = $app->modelsManager->executeQuery($phql, array(
