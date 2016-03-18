@@ -14,19 +14,12 @@ $loader->registerDirs(
 )->register();
 
 $di = new FactoryDefault();
-
 // Set up the database service
 $di->set('db', function () {
-	return new PdoMysql(
-		array(
-			"host" => "127.0.0.1",
-			"username" => "root",
-			"password" => "000000",
-			"dbname" => "robotics",
-		)
-	);
+    require (__DIR__ . '/db.php');
+	return new PdoMysql($config);
 });
-
+//
 // Create and bind the DI to the application
 $app = new Micro($di);
 
