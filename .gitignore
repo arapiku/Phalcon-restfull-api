@@ -22,3 +22,6 @@ Demo/Api/DogstarTest.php
 
 PhalApi-Net/
 .idea/
+.phpintel/
+Runtime/
+db.php
