@@ -8,10 +8,10 @@ use Phalcon\Mvc\Micro;
 $loader = new Loader();
 
 $loader->registerDirs(
-	array(
-		__DIR__ . '/models/',
-	)
-)->register();
+            array(
+                __DIR__ . '/models/',
+            )
+        )->register();
 
 $di = new FactoryDefault();
 // Set up the database service
@@ -23,238 +23,61 @@ $di->set('db', function () {
 // Create and bind the DI to the application
 $app = new Micro($di);
 
-// Define the routes here
-$app->get('/api/messages', function () use ($app) {
-	$phql = "SELECT * FROM msg ORDER BY time";
-	$messages = $app->modelsManager->executeQuery($phql);
-
-	$data = array();
-	foreach ($messages as $message) {
-		$data[] = array(
-			'id' => $message->id,
-			'content' => $message->contents,
-		);
-	}
-
-	echo json_encode($data);
-
-});
-
-// Searches for messages with $content in their content
-$app->get('/api/messages/search/{content}', function ($content) use ($app) {
-	$phql = "SELECT * FROM msg WHERE contents LIKE :content: ORDER BY contents";
+// get messages
+$app->get('/api/messages/{to_uid}', function ($to_uid) use ($app) {
+	$phql = "SELECT * FROM msg WHERE to_uid = :to_uid: ORDER BY time";
 	$messages = $app->modelsManager->executeQuery(
-		$phql,
-		array(
-			'content' => '%' . $content . '%',
-		)
-	);
-
-	$data = array();
-	foreach ($messages as $robot) {
-		$data[] = array(
-			'id' => $robot->id,
-			'content' => $robot->contents,
-		);
-	}
-
-	echo json_encode($data);
-});
-
-// Retrieves messages based on primary key
-$app->get('/api/msg/{id:[0-9]+}', function ($id) use ($app) {
-	$phql = "SELECT * FROM msg WHERE id = :id:";
-	$robot = $app->modelsManager->executeQuery($phql, array(
-		'id' => $id,
-	))->getFirst();
-
-	// Create a response
+        $phql,
+        array(
+            'to_uid' => $to_uid,
+            )
+        );
 	$response = new Response();
 
-	if ($robot == false) {
+	if ($messages == false) {
 		$response->setJsonContent(
 			array(
-				'status' => 'NOT-FOUND',
+				'status' => '0',
 			)
 		);
 	} else {
+        $data = array();
+        foreach ($messages as $message) {
+
+            $data[] = array(
+                'time' => $message->time,
+                'content' => $message->contents,
+            );
+            // move message to another table
+            $phql = "INSERT INTO message (from_uid, to_uid, contents,time) VALUES (:from_uid:, :to_uid:, :contents:, :time:)";
+            $status = $app->modelsManager->executeQuery($phql, array(
+                'from_uid' => $message->from_uid,
+                'to_uid' => $message->to_uid,
+                'contents' => $message->contents,
+                'time' => $message->time,
+            ));
+            // delete message
+            if ($status->success() == true) {
+                $phql = "DELETE FROM msg WHERE id = :id:";
+                $app->modelsManager->executeQuery ($phql, array (
+                    'id' => $message->id,
+                ));
+            }
+        }
 		$response->setJsonContent(
 			array(
-				'status' => 'FOUND',
-				'data' => array(
-					'id' => $robot->id,
-					'name' => $robot->name,
-				),
-			)
+				'status' => '1',
+				'data' => $data,
+				)
 		);
 	}
 
 	return $response;
+
+
 });
 
-// Adds a new robot
-$app->post('/api/robots', function () use ($app) {
-	$robot = $app->request->getJsonRawBody();
-	$phql = "INSERT INTO Robots (name, type, year) VALUES (:name:, :type:, :year:)";
-
-	$status = $app->modelsManager->executeQuery($phql, array(
-		'name' => $robot->name,
-		'type' => $robot->type,
-		'year' => $robot->year,
-	));
-
-	// Create a response
-	$response = new Response();
-
-	// Check if the insertion was successful
-	if ($status->success() == true) {
-
-		// Change the HTTP status
-		$response->setStatusCode(201, "Created");
-
-		$robot->id = $status->getModel()->id;
-
-		$response->setJsonContent(
-			array(
-				'status' => 'OK',
-				'data' => $robot,
-			)
-		);
-
-	} else {
-
-		// Change the HTTP status
-		$response->setStatusCode(409, "Conflict");
-
-		// Send errors to the client
-		$errors = array();
-		foreach ($status->getMessages() as $message) {
-			$errors[] = $message->getMessage();
-		}
-
-		$response->setJsonContent(
-			array(
-				'status' => 'ERROR',
-				'messages' => $errors,
-			)
-		);
-	}
-
-	return $response;
-});
-
-// Updates robots based on primary key
-$app->put('/api/robots/{id:[0-9]+}', function () {
-	$robot = $app->request->getJsonRawBody();
-
-	$phql = "UPDATE Robots SET name = :name:, type = :type:, year = :year: WHERE id = :id:";
-	$status = $app->modelsManager->executeQuery($phql, array(
-		'id' => $id,
-		'name' => $robot->name,
-		'type' => $robot->type,
-		'year' => $robot->year,
-	));
-
-	// Create a response
-	$response = new Response();
-
-	// Check if the insertion was successful
-	if ($status->success() == true) {
-		$response->setJsonContent(
-			array(
-				'status' => 'OK',
-			)
-		);
-	} else {
-
-		// Change the HTTP status
-		$response->setStatusCode(409, "Conflict");
-
-		$errors = array();
-		foreach ($status->getMessages() as $message) {
-			$errors[] = $message->getMessage();
-		}
-
-		$response->setJsonContent(
-			array(
-				'status' => 'ERROR',
-				'messages' => $errors,
-			)
-		);
-	}
-
-	return $response;
-});
-
-// Deletes robots based on primary key
-$app->delete('/api/robots/{id:[0-9]+}', function () {
-	$phql = "DELETE FROM Robots WHERE id = :id:";
-	$status = $app->modelsManager->executeQuery($phql, array(
-		'id' => $id,
-	));
-
-	// Create a response
-	$response = new Response();
-
-	if ($status->success() == true) {
-		$response->setJsonContent(
-			array(
-				'status' => 'OK',
-			)
-		);
-	} else {
-
-		// Change the HTTP status
-		$response->setStatusCode(409, "Conflict");
-
-		$errors = array();
-		foreach ($status->getMessages() as $message) {
-			$errors[] = $message->getMessage();
-		}
-
-		$response->setJsonContent(
-			array(
-				'status' => 'ERROR',
-				'messages' => $errors,
-			)
-		);
-	}
-
-	return $response;
-});
-$app->notFound(function () use ($app) {
-	$app->response->setStatusCode(404, "Not Found")->sendHeaders();
-	echo 'This is crazy, but this page was not found!';
-});
-$app->get('/api/messages/{id:[0-9]+}', function ($id) use ($app) {
-	$phql = "SELECT * FROM msg WHERE id = :id:";
-	$message = $app->modelsManager->executeQuery($phql, array(
-		'id' => $id,
-	))->getFirst();
-
-	// Create a response
-	$response = new Response();
-
-	if ($message == false) {
-		$response->setJsonContent(
-			array(
-				'status' => 'NOT-FOUND',
-			)
-		);
-	} else {
-		$response->setJsonContent(
-			array(
-				'status' => 'FOUND',
-				'data' => array(
-					'id' => $message->id,
-					'content' => $message->contents,
-				),
-			)
-		);
-	}
-
-	return $response;
-});
+// post message
 $app->post('/api/messages', function () use ($app) {
 	$messages = $app->request->getJsonRawBody();
 	$phql = "INSERT INTO msg (from_uid, to_uid, contents,time) VALUES (:from_uid:, :to_uid:, :contents:, :time:)";
@@ -304,5 +127,9 @@ $app->post('/api/messages', function () use ($app) {
 	}
 
 	return $response;
+});
+$app->notFound(function () use ($app) {
+    $app->response->setStatusCode(404, "Not Found")->sendHeaders();
+    echo 'This is crazy, but this page was not found!';
 });
 $app->handle();
