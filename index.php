@@ -23,6 +23,23 @@ $di->set('db', function () {
 // Create and bind the DI to the application
 $app = new Micro($di);
 
+$app->post('/api/user/login', function () use ($app) {
+    $re = $app->request->getJsonRawBody();
+    $email = $re->email;
+    $phql = "SELECT password_hash FROM user WHERE email = :email:";
+    $message = $app->modelsManager->executeQuery($phql, array(
+        'email' => $email,
+    ))->getFirst();
+    if ($message == false) {
+        echo 'user not found';
+    }else{
+        include (__DIR__ . '/helper.php');
+        if (validatePassword($re->password, $message->password_hash)){
+            echo 'success';
+        }
+    }
+
+});
 // get messages
 $app->get('/api/messages/{to_uid}', function ($to_uid) use ($app) {
 	$phql = "SELECT * FROM msg WHERE to_uid = :to_uid: ORDER BY time";
