@@ -26,31 +26,28 @@ $app = new Micro($di);
 $app->post('/api/user/login', function () use ($app) {
     $re = $app->request->getJsonRawBody();
     $email = $re->email;
-    $phql = "SELECT password_hash FROM user WHERE email = :email:";
-    $message = $app->modelsManager->executeQuery($phql, array(
-        'email' => $email,
-    ))->getFirst();
+    $password = $re->password;
+    checkUser($email,$password);
+
+
+});
+// get messages
+function checkUser($email,$password) {
+
+    $message = User::findByRawSql($email);
     if ($message == false) {
         echo 'user not found';
     }else{
         include (__DIR__ . '/helper.php');
-        if (validatePassword($re->password, $message->password_hash)){
+        if (validatePassword($password, $message->password_hash)){
             echo 'success';
         }
     }
-
-});
-// get messages
+}
 $app->get('/api/messages/{to_uid}', function ($to_uid) use ($app) {
-	$phql = "SELECT * FROM msg WHERE to_uid = :to_uid: ORDER BY time";
-	$messages = $app->modelsManager->executeQuery(
-        $phql,
-        array(
-            'to_uid' => $to_uid,
-            )
-        );
-	$response = new Response();
 
+	$response = new Response();
+    $messages = Msg::getMessage($to_uid);
 	if ($messages == false) {
 		$response->setJsonContent(
 			array(
@@ -66,13 +63,7 @@ $app->get('/api/messages/{to_uid}', function ($to_uid) use ($app) {
                 'content' => $message->contents,
             );
             // move message to another table
-            $phql = "INSERT INTO message (from_uid, to_uid, contents,time) VALUES (:from_uid:, :to_uid:, :contents:, :time:)";
-            $status = $app->modelsManager->executeQuery($phql, array(
-                'from_uid' => $message->from_uid,
-                'to_uid' => $message->to_uid,
-                'contents' => $message->contents,
-                'time' => $message->time,
-            ));
+
             // delete message
             if ($status->success() == true) {
                 $phql = "DELETE FROM msg WHERE id = :id:";

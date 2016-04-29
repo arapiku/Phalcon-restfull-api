@@ -13,4 +13,15 @@ class message extends Model {
     public function getSource() {
         return 'message';
     }
+    public static function moveToMessage($array) {
+        $phql = "INSERT INTO message (from_uid, to_uid, contents,time) VALUES (:from_uid:, :to_uid:, :contents:, :time:)";
+        $status = $app->modelsManager->executeQuery($phql, $array
+//        (
+//            'from_uid' => $message->from_uid,
+//            'to_uid' => $message->to_uid,
+//            'contents' => $message->contents,
+//            'time' => $message->time,
+//        )
+    );
+    }
 }
