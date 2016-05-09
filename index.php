@@ -34,12 +34,12 @@ $app->post('/api/user/login', function () use ($app) {
 // get messages
 function checkUser($email,$password) {
 
-    $message = User::findByRawSql($email);
+    $message = User::findByEmail($email);
     if ($message == false) {
         echo 'user not found';
     }else{
-        include (__DIR__ . '/helper.php');
-        if (validatePassword($password, $message->password_hash)){
+        include_once (__DIR__ . '/lib/Toolkit.class.php');
+        if (Toolkit::validatePassword($password, $message->password_hash)){
             echo 'success';
         }
     }
@@ -47,7 +47,8 @@ function checkUser($email,$password) {
 $app->get('/api/messages/{to_uid}', function ($to_uid) use ($app) {
 
 	$response = new Response();
-    $messages = Msg::getMessage($to_uid);
+    $messages = Msg::getMsg($to_uid);
+//    var_dump($messages);exit;
 	if ($messages == false) {
 		$response->setJsonContent(
 			array(
@@ -57,20 +58,17 @@ $app->get('/api/messages/{to_uid}', function ($to_uid) use ($app) {
 	} else {
         $data = array();
         foreach ($messages as $message) {
-
+//            print_r($message->id);continue;
             $data[] = array(
                 'time' => $message->time,
                 'content' => $message->contents,
             );
             // move message to another table
-
+            Message::moveToMessage($message);
             // delete message
-            if ($status->success() == true) {
-                $phql = "DELETE FROM msg WHERE id = :id:";
-                $app->modelsManager->executeQuery ($phql, array (
-                    'id' => $message->id,
-                ));
-            }
+
+            Msg::delMsgById($message->id);
+
         }
 		$response->setJsonContent(
 			array(
@@ -87,15 +85,12 @@ $app->get('/api/messages/{to_uid}', function ($to_uid) use ($app) {
 
 // post message
 $app->post('/api/messages', function () use ($app) {
+    $header = $app->request->getHeaders();
+    $file = $app->request->getUploadedFiles();
+    var_dump($file);
+    print_r($header);exit;
 	$messages = $app->request->getJsonRawBody();
-	$phql = "INSERT INTO msg (from_uid, to_uid, contents,time) VALUES (:from_uid:, :to_uid:, :contents:, :time:)";
-
-	$status = $app->modelsManager->executeQuery($phql, array(
-		'from_uid' => $messages->from_user,
-		'to_uid' => $messages->to_user,
-		'contents' => $messages->content,
-		'time' => $messages->time,
-	));
+    $status = Msg::saveMsg($messages);
 
 	// Create a response
 	$response = new Response();
