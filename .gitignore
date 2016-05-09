@@ -21,4 +21,4 @@
 .idea/
 .phpintel/
 Runtime/
-config/constant.php
+config/db.php

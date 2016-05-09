@@ -1,0 +1,14 @@
+<?php
+
+// DEFINE Login api status
+define('LOGIN_STATE_SUCCESS', 1000);
+define('LOGIN_STATE_FAILD', 1001);
+define('LOGIN_EMAIL_INVALID', 1002);
+define('LOGIN_USER_NOTFOUND', 1003);
+define('LOGIN_EMAIL_PASSWORD_EMPTY', 1004);
+define('LOGIN_PASSWORD_INVALID', 1005);
+
+
+//DEFINE Message api status
+
+define('GET_MESSAGE_STATE_SUCCESS', 1000);
