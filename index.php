@@ -1,4 +1,5 @@
 <?php
+include_once (__DIR__ . '/config/constant.php');
 use Phalcon\Db\Adapter\Pdo\Mysql as PdoMysql;
 use Phalcon\Di\FactoryDefault;
 use Phalcon\Http\Response;
@@ -16,7 +17,7 @@ $loader->registerDirs(
 $di = new FactoryDefault();
 // Set up the database service
 $di->set('db', function () {
-    require (__DIR__ . '/db.php');
+    require (__DIR__ . '/config/db.php');
 	return new PdoMysql($config);
 });
 //
@@ -25,30 +26,71 @@ $app = new Micro($di);
 
 $app->post('/api/user/login', function () use ($app) {
     $re = $app->request->getJsonRawBody();
-    $email = $re->email;
-    $password = $re->password;
-    checkUser($email,$password);
-
-
+    $response = new Response();
+    if ($re == NULL) {
+		$response->setJsonContent(
+			array(
+				'status' => LOGIN_STATE_FAILD,
+			)
+		);
+	} else {
+    	$email = isset($re->email)?$re->email:'';
+    	$password = isset($re->password)?$re->password:'';
+    	if($email=='' || $password=='')
+    	{
+    		$response->setJsonContent(
+				array(
+					'status' => LOGIN_EMAIL_PASSWOD_EMPTY,
+				)
+			);
+			return $response;
+    	}
+    	include_once (__DIR__ . '/lib/Toolkit.class.php');
+    	if (!Toolkit::checkEmail($email)){
+    		$response->setJsonContent(
+				array(
+					'status' => LOGIN_EMAIL_INVALID,
+				)
+			);
+			return $response;
+    	}
+    	$dbUser = User::findByEmail($email);
+    	if(!$dbUser){
+    		$response->setJsonContent(
+				array(
+					'status' => LOGIN_USER_NOFOUND,
+				)
+			);
+			return $response;
+    	}
+    	if (!Toolkit::validatePassword($password, $dbUser->password_hash))
+    	{
+    		$response->setJsonContent(
+				array(
+					'status' => LOGIN_PASSWORD_INVALID,
+				)
+			);
+			return $response;
+    	}
+    	$data = array(
+    		'frendId' => 123,
+    		);
+    	$response->setJsonContent(
+			array(
+				'status' => LOGIN_PASSWORD_INVALID,
+				'data' => $data,
+			)
+		);
+	}
+	return $response;
 });
-// get messages
-function checkUser($email,$password) {
 
-    $message = User::findByEmail($email);
-    if ($message == false) {
-        echo 'user not found';
-    }else{
-        include_once (__DIR__ . '/lib/Toolkit.class.php');
-        if (Toolkit::validatePassword($password, $message->password_hash)){
-            echo 'success';
-        }
-    }
-}
+// get messages
 $app->get('/api/messages/{to_uid}', function ($to_uid) use ($app) {
 
 	$response = new Response();
     $messages = Msg::getMsg($to_uid);
-//    var_dump($messages);exit;
+
 	if ($messages == false) {
 		$response->setJsonContent(
 			array(

@@ -26,15 +26,19 @@ class Toolkit
 
     }
     static function compareString($expected, $actual)
-        {
-            $expected .= "\0";
-            $actual .= "\0";
-            $expectedLength = mb_strlen($expected,'8bit');
-            $actualLength = mb_strlen($actual,'8bit');
-            $diff = $expectedLength - $actualLength;
-            for ($i = 0; $i < $actualLength; $i++) {
-                $diff |= (ord($actual[$i]) ^ ord($expected[$i % $expectedLength]));
-            }
-            return $diff === 0;
+    {
+        $expected .= "\0";
+        $actual .= "\0";
+        $expectedLength = mb_strlen($expected,'8bit');
+        $actualLength = mb_strlen($actual,'8bit');
+        $diff = $expectedLength - $actualLength;
+        for ($i = 0; $i < $actualLength; $i++) {
+            $diff |= (ord($actual[$i]) ^ ord($expected[$i % $expectedLength]));
         }
+        return $diff === 0;
+    }
+    static public function checkEmail($email='')
+    {
+        return preg_match("/([\w\-]+\@[\w\-]+\.[\w\-]+)/",$email);
+    }
 }
